@@ -2,8 +2,8 @@ YDUR'S FRIED & GRILL - FRONTEND DEMONSTRATION
 
 CONTENTS
 - index.html       Shared login page and role-based dashboard entry point
-- css/style.css    Existing visual theme, login, and responsive dashboard styles
-- js/app.js        Frontend demo login, role navigation, dashboard, and logout logic
+- css/style.css    Existing visual theme plus responsive ordering and payment modules
+- js/app.js        Role navigation, menu pricing, orders, kitchen workflow, sales, and logout
 
 HOW TO OPEN (NO BACKEND OR LOCALHOST REQUIRED)
 1. Open this folder in Visual Studio Code.
@@ -15,16 +15,32 @@ DEMO ACCOUNTS
 - Cashier:       cashier / cashier123
 - Kitchen Staff: kitchen / kitchen123
 
-Each account opens its own role-specific dashboard. Dashboard data is intentionally
-empty; there are no sample transactions, orders, inventory records, or statistics.
-Navigation between the planned workspaces is available, but restaurant modules are
-not implemented yet. Kitchen order status controls will appear with future order data.
+ORDER, MENU, AND PAYMENT DEMONSTRATION
+- Cashier: create Dine-in or Takeout orders, view order history, browse products,
+  accept cash payments, and print receipts.
+- Administrator: add and remove products, change menu prices, review orders, and
+  view confirmed sales.
+- Kitchen Staff: view incoming food orders and move them through Preparing, Ready,
+  and Completed. Kitchen screens omit selling prices and payment details.
+- New orders start as Pending and Unpaid. Only confirming sufficient cash payment
+  marks an order Paid and records a sale.
+- The initial menu is clearly labeled demonstration data:
+  Grilled Chicken ₱150.00, Pork BBQ ₱120.00, Grilled Seafood ₱180.00,
+  French Fries ₱80.00, and Iced Tea ₱35.00. These are sample prices, not confirmed
+  restaurant prices. An Administrator can edit them.
+- Orders store a snapshot of item names, quantities, unit prices, and totals so
+  later menu-price changes do not alter recorded orders.
+- Product and transaction records are saved in this browser's localStorage under
+  ydurProducts and ydurTransactions. Clearing browser storage removes this demo data.
+- No sample transactions are preloaded; dashboard statistics remain empty until an
+  order is actually created and, for sales totals, paid.
 
 SECURITY
-This is a frontend-only demonstration. Credentials are hardcoded in JavaScript and
-the role check uses sessionStorage, so this is not secure authentication or access
-control. Do not use these credentials for real accounts. Replace the demo logic with
-server-side authentication and role permissions during backend integration.
+This is a frontend-only demonstration. Credentials are hardcoded in JavaScript,
+role checks use sessionStorage, and records are accessible through browser storage.
+These checks do not provide secure authentication or access control. Do not use
+these credentials or this application for real transactions. Implement server-side
+authentication, authorization, and persistent storage during backend integration.
 
 Google Fonts are used when an internet connection is available. Local font fallbacks
 are provided.
