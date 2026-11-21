@@ -1327,6 +1327,205 @@ tbody tr:last-child td {
     }
 }
 
+/* Staff user management */
+.staff-grid {
+    display: grid;
+    grid-template-columns: minmax(260px, 360px) minmax(0, 1fr);
+    gap: 20px
+}
+
+.staff-create-form {
+    display: grid;
+    gap: 10px
+}
+
+.staff-create-form label {
+    display: grid
+}
+
+.staff-create-form .field-label {
+    margin: 2px 0 6px
+}
+
+.staff-create-form .primary-button {
+    width: 100%;
+    margin-top: 8px
+}
+
+.staff-notice {
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 16px;
+    font-size: 12px
+}
+
+.staff-notice.success {
+    background: #edf7ef;
+    border: 1px solid #bcd7c2;
+    color: #315b39
+}
+
+.staff-notice.error {
+    background: #fff0ee;
+    border: 1px solid #f0d2cf;
+    color: #a74138
+}
+
+.staff-list-panel .table-scroll {
+    min-height: 180px
+}
+
+.staff-list-toolbar {
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 14px;
+    margin-bottom: 16px
+}
+
+.staff-list-toolbar .panel-heading {
+    margin-bottom: 0
+}
+
+.staff-filter {
+    display: grid;
+    gap: 5px;
+    width: min(100%, 210px)
+}
+
+.staff-filter .field-label {
+    margin: 0
+}
+
+.staff-status-form {
+    margin: 0
+}
+
+.danger-button {
+    border: 1px solid #d9aaa5;
+    border-radius: 6px;
+    background: #fff;
+    color: #a74138;
+    padding: 7px 10px;
+    font-size: 10px;
+    font-weight: 700;
+    cursor: pointer
+}
+
+.danger-button:hover,
+.danger-button:focus-visible {
+    background: #fff0ee;
+    border-color: #bd756f
+}
+
+.account-action-note {
+    color: #89837a;
+    font-size: 10px
+}
+
+.staff-row-actions {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px
+}
+
+.staff-reset-button {
+    padding: 7px 10px;
+    font-size: 10px
+}
+
+.delete-blocked {
+    max-width: 220px;
+    line-height: 1.5
+}
+
+.staff-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: grid;
+    place-items: center;
+    padding: 20px;
+    background: rgba(37, 35, 31, .48)
+}
+
+.staff-modal[hidden] {
+    display: none
+}
+
+.staff-modal-card {
+    width: min(100%, 430px);
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    box-shadow: 0 18px 60px rgba(37, 35, 31, .22);
+    padding: 26px
+}
+
+.staff-modal-card h2 {
+    margin: 0 0 8px;
+    color: #302b25;
+    font-family: 'Playfair Display', Georgia, serif;
+    font-size: 24px
+}
+
+.staff-modal-card p {
+    color: #89837a;
+    font-size: 12px;
+    line-height: 1.6
+}
+
+.staff-modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 18px
+}
+
+.temporary-password-value {
+    margin: 16px 0;
+    padding: 14px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fbfaf8;
+    text-align: center
+}
+
+.temporary-password-value code {
+    color: #302b25;
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    user-select: all
+}
+
+.staff-modal-card>.primary-button,
+.staff-modal-dismiss {
+    width: 100%
+}
+
+.staff-modal-dismiss {
+    margin-top: 8px
+}
+
+@media (max-width: 980px) {
+    .staff-grid {
+        grid-template-columns: 1fr
+    }
+}
+
+@media (max-width: 600px) {
+    .staff-list-toolbar {
+        align-items: stretch;
+        flex-direction: column
+    }
+
+    .staff-filter {
+        width: 100%
+    }
+}
+
 /* Login and role-based dashboard */
 .login-layout {
     min-height: 100vh;
@@ -1459,20 +1658,56 @@ tbody tr:last-child td {
 }
 
 .password-field .form-control {
-    padding-right: 60px
+    padding-right: 48px
 }
 
 .password-toggle {
     position: absolute;
     top: 50%;
-    right: 10px;
+    right: 7px;
+    width: 34px;
+    height: 34px;
+    display: grid;
+    place-items: center;
     transform: translateY(-50%);
     border: 0;
+    border-radius: 6px;
     background: transparent;
     color: var(--accent);
-    font-size: 10px;
-    font-weight: 700;
-    padding: 7px
+    padding: 7px;
+    cursor: pointer
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+    background: #f2ede6;
+    color: #8e5839
+}
+
+.password-eye {
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.8;
+    stroke-linecap: round;
+    stroke-linejoin: round
+}
+
+.password-eye-open {
+    display: block
+}
+
+.password-eye-off {
+    display: none
+}
+
+.password-toggle.is-visible .password-eye-open {
+    display: none
+}
+
+.password-toggle.is-visible .password-eye-off {
+    display: block
 }
 
 .login-submit {

@@ -1,0 +1,8 @@
+
+# Protect database credentials
+/config/database.php
+
+# Keep temporary recovery tools out of GitHub
+/reset_admin.php
+/setup_admin.php
+/test_connection.php

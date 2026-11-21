@@ -1,19 +1,40 @@
-YDUR'S FRIED & GRILL - FRONTEND DEMONSTRATION
+YDUR'S FRIED & GRILL - MANAGEMENT SYSTEM
 
 CONTENTS
-- index.html       Shared login page and role-based dashboard entry point
+- index.php        Database-backed login and role-based dashboard entry point
+- index.html       Redirects visitors to the PHP entry point
 - css/style.css    Existing visual theme plus responsive ordering and payment modules
 - js/app.js        Role navigation, menu pricing, orders, kitchen workflow, sales, and logout
 
-HOW TO OPEN (NO BACKEND OR LOCALHOST REQUIRED)
-1. Open this folder in Visual Studio Code.
-2. Open index.html directly in a modern browser.
-3. Use one of the demonstration accounts below to sign in.
+HOW TO OPEN LOCALLY WITH XAMPP
+1. Start Apache and MySQL from the XAMPP Control Panel.
+2. Confirm config/database.php connects to the existing ydurs_db database.
+3. Open http://localhost/ydur_fried_grill_frontend/docs/index.php
+4. Sign in with an existing active account from the users table.
 
-DEMO ACCOUNTS
-- Administrator: admin / admin123
-- Cashier:       cashier / cashier123
-- Kitchen Staff: kitchen / kitchen123
+AUTHENTICATION
+- Usernames and passwords are checked against users using PDO and password_verify().
+- Sessions store the authenticated account and its database-assigned role.
+- Dashboard role URLs are checked against the session; logout expires the session.
+- There is no public registration flow.
+
+STAFF ACCOUNT MANAGEMENT
+- The Administrator sidebar includes Staff / User Management.
+- Administrators can create active Cashier or Kitchen Staff accounts.
+- Staff passwords are hashed with password_hash(), duplicate usernames are rejected,
+  and staff management actions require an active Admin session and a valid CSRF token.
+- The staff list defaults to active accounts and can be filtered by status or role.
+- Cashier and Kitchen Staff accounts can be deactivated or reactivated. Deactivation
+  preserves the account and its records; inactive users cannot sign in, and existing
+  sessions are revalidated against the database on every request.
+- Only unused Cashier and Kitchen Staff accounts can be permanently deleted. Admin
+  accounts and accounts referenced by orders, payments, or stock movements are
+  protected; related records are never deleted.
+- Administrators cannot deactivate their own account or change another Admin account.
+- Administrators can generate a one-time temporary password for Cashier or Kitchen
+  Staff accounts. The temporary password is shown once and is not saved in plain text.
+- Staff accounts with must_change_password set to 1 must create a new password before
+  any dashboard access.
 
 ORDER, MENU, AND PAYMENT DEMONSTRATION
 - Cashier: create Dine-in or Takeout orders, view order history, browse products,
@@ -30,17 +51,15 @@ ORDER, MENU, AND PAYMENT DEMONSTRATION
   restaurant prices. An Administrator can edit them.
 - Orders store a snapshot of item names, quantities, unit prices, and totals so
   later menu-price changes do not alter recorded orders.
-- Product and transaction records are saved in this browser's localStorage under
-  ydurProducts and ydurTransactions. Clearing browser storage removes this demo data.
+- Product and transaction records are still saved in this browser's localStorage
+  under ydurProducts and ydurTransactions. Clearing browser storage removes this data.
 - No sample transactions are preloaded; dashboard statistics remain empty until an
   order is actually created and, for sales totals, paid.
 
-SECURITY
-This is a frontend-only demonstration. Credentials are hardcoded in JavaScript,
-role checks use sessionStorage, and records are accessible through browser storage.
-These checks do not provide secure authentication or access control. Do not use
-these credentials or this application for real transactions. Implement server-side
-authentication, authorization, and persistent storage during backend integration.
+DATA STORAGE LIMITATION
+Only login authentication is connected to MySQL. Orders, products, payments, and
+other dashboard records remain browser-local demonstration data; they are not yet
+persisted to the existing database tables.
 
 Google Fonts are used when an internet connection is available. Local font fallbacks
 are provided.

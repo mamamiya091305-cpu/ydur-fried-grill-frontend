@@ -1,9 +1,3 @@
-const DEMO_ACCOUNTS = {
-  admin: { password: 'admin123', role: 'admin', name: 'Administrator' },
-  cashier: { password: 'cashier123', role: 'cashier', name: 'Cashier' },
-  kitchen: { password: 'kitchen123', role: 'kitchen', name: 'Kitchen Staff' }
-};
-
 const ROLE_NAMES = {
   admin: 'Administrator',
   cashier: 'Cashier',
@@ -56,8 +50,10 @@ const DEMO_PRODUCTS = [
 const app = document.getElementById('app');
 const params = new URLSearchParams(window.location.search);
 const requestedRole = params.get('dashboard');
-let currentUser = readSession();
-let activePage = 'dashboard';
+const auth = window.YDUR_AUTH || { user: null, csrfToken: '', loginError: '', staffAccounts: [], staffMessage: '', staffError: '', temporaryPassword: '', temporaryPasswordUsername: '' };
+let currentUser = auth.user;
+let activePage = params.get('staff') === '1' ? 'staff' : 'dashboard';
+let staffFilter = 'active';
 let storageError = '';
 let draftOrder = null;
 let historySearch = '';
@@ -67,19 +63,6 @@ let selectedPosOrderId = '';
 let paymentReceived = '';
 let lastReceiptOrderId = '';
 let toastTimer;
-
-function readSession() {
-  try {
-    const stored = JSON.parse(sessionStorage.getItem('ydurDemoSession') || 'null');
-    const account = stored && DEMO_ACCOUNTS[stored.username];
-    if (account && stored.role === account.role) {
-      return { username: stored.username, role: account.role, name: account.name };
-    }
-  } catch (error) {
-    sessionStorage.removeItem('ydurDemoSession');
-  }
-  return null;
-}
 
 function dashboardUrl(role) {
   return `${window.location.pathname}?dashboard=${encodeURIComponent(role)}`;
@@ -235,57 +218,37 @@ function showLogin() {
           <p class="eyebrow">STAFF ACCESS</p>
           <h2>Welcome back</h2>
           <p class="login-intro">Sign in to your YDUR's Fried &amp; Grill account.</p>
-          <div class="login-error" id="loginError" role="alert" aria-live="polite" hidden></div>
+          <div class="login-error" id="loginError" role="alert" aria-live="polite"${auth.loginError ? '' : ' hidden'}>${escapeHTML(auth.loginError)}</div>
           <label class="field-label" for="username">Username</label>
           <input class="form-control" id="username" name="username" autocomplete="username" placeholder="Enter your username" required>
           <label class="field-label" for="password">Password</label>
           <div class="password-field">
             <input class="form-control" id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required>
-            <button class="password-toggle" id="passwordToggle" type="button" aria-label="Show password" aria-pressed="false">Show</button>
+            <button class="password-toggle" id="passwordToggle" type="button" aria-label="Show password" aria-pressed="false">
+              <svg class="password-eye password-eye-open" viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.5-6 10-6 10 6 10 6-3.5 6-10 6S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>
+              <svg class="password-eye password-eye-off" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 3 18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A10.8 10.8 0 0 1 12 5c6.5 0 10 7 10 7a16.7 16.7 0 0 1-2.1 3M6.4 6.4C3.6 8.3 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 4.1-.9"/></svg>
+            </button>
           </div>
+          <input type="hidden" name="csrf_token" value="${escapeHTML(auth.csrfToken)}">
           <button class="primary-button login-submit" type="submit">Sign in <span aria-hidden="true">→</span></button>
-          <details class="demo-accounts">
-            <summary>Frontend demo accounts</summary>
-            <p><strong>Administrator</strong> &nbsp; admin / admin123</p>
-            <p><strong>Cashier</strong> &nbsp; cashier / cashier123</p>
-            <p><strong>Kitchen Staff</strong> &nbsp; kitchen / kitchen123</p>
-          </details>
-          <p class="security-note">Demo only: credentials are checked in your browser and do not provide secure authentication.</p>
+          <p class="security-note">Sign in with the username and password provided for your staff account.</p>
         </form>
       </section>
     </main>`;
 
   const form = document.getElementById('loginForm');
   const password = document.getElementById('password');
+  form.method = 'post';
+  form.action = 'index.php';
   document.getElementById('passwordToggle').addEventListener('click', event => {
     const visible = password.type === 'password';
     password.type = visible ? 'text' : 'password';
-    event.currentTarget.textContent = visible ? 'Hide' : 'Show';
     event.currentTarget.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
     event.currentTarget.setAttribute('aria-pressed', String(visible));
-  });
-  form.addEventListener('submit', event => {
-    event.preventDefault();
-    const username = document.getElementById('username').value.trim().toLowerCase();
-    const passwordValue = password.value;
-    const account = DEMO_ACCOUNTS[username];
-    const error = document.getElementById('loginError');
-
-    if (!username || !passwordValue) {
-      error.textContent = 'Enter both your username and password.';
-      error.hidden = false;
-      return;
-    }
-    if (!account || account.password !== passwordValue) {
-      error.textContent = 'Incorrect username or password. Please try again.';
-      error.hidden = false;
-      password.value = '';
-      password.focus();
-      return;
-    }
-
-    sessionStorage.setItem('ydurDemoSession', JSON.stringify({ username, role: account.role }));
-    window.location.assign(dashboardUrl(account.role));
+    event.currentTarget.classList.toggle('is-visible', visible);
+    const cursorPosition = password.selectionStart;
+    password.focus();
+    if (cursorPosition !== null) password.setSelectionRange(cursorPosition, cursorPosition);
   });
 }
 
@@ -525,8 +488,129 @@ function pageContent(role, page) {
   }
   if (page === 'menu' && (role === 'admin' || role === 'cashier')) return productManagementPage();
   if (page === 'pos' && (role === 'admin' || role === 'cashier')) return paymentPage();
+  if (page === 'staff' && role === 'admin') return staffManagementPage();
   const item = NAVIGATION[role].find(entry => entry[0] === page);
   return `<div class="page-heading"><div><p class="eyebrow">${role === 'admin' ? 'MANAGEMENT' : 'POINT OF SALE'}</p><h1>${escapeHTML(item ? item[1] : 'Dashboard')}</h1><p class="page-description">This workspace is ready for future database integration.</p></div></div><article class="panel placeholder-panel">${emptyState('This module is outside the scope of the current frontend demonstration.', item ? item[2] : '◇')}</article>`;
+}
+
+function staffManagementPage() {
+  const roleLabels = { admin: 'Admin', cashier: 'Cashier', kitchen: 'Kitchen Staff' };
+  const accounts = (auth.staffAccounts || []).filter(account => {
+    const active = Number(account.is_active) === 1;
+    if (staffFilter === 'all') return true;
+    if (staffFilter === 'active') return active;
+    if (staffFilter === 'inactive') return !active;
+    if (staffFilter === 'admin' || staffFilter === 'cashier' || staffFilter === 'kitchen') {
+      return account.role === staffFilter;
+    }
+    return false;
+  });
+  const rows = accounts.map(account => {
+    const id = Number(account.id);
+    const role = String(account.role);
+    const active = Number(account.is_active) === 1;
+    const isOwnAccount = id === Number(currentUser.id);
+    const targetAllowed = ['cashier', 'kitchen'].includes(role) && !isOwnAccount;
+    const created = account.created_at ? dateTime(account.created_at) : 'Unknown';
+    const actionButton = targetAllowed
+      ? `<div class="staff-row-actions">
+          <button class="secondary-button staff-reset-button" type="button" data-reset-account="${id}" data-reset-username="${escapeHTML(account.username)}">Reset Password</button>
+          <button class="${active ? 'danger-button' : 'secondary-button'}" type="button" data-staff-action="${active ? 'deactivate' : 'reactivate'}" data-account-id="${id}" data-account-name="${escapeHTML(account.full_name)}">${active ? 'Deactivate' : 'Reactivate'}</button>
+          ${account.deletion_block_reason
+            ? `<span class="account-action-note delete-blocked">Delete blocked: ${escapeHTML(account.deletion_block_reason)}</span>`
+            : `<button class="danger-button" type="button" data-staff-action="delete" data-account-id="${id}" data-account-name="${escapeHTML(account.full_name)}">Delete Permanently</button>`}
+        </div>`
+      : `<span class="account-action-note">${isOwnAccount
+        ? 'Current account. Admin accounts cannot be permanently deleted.'
+        : role === 'admin'
+          ? 'Admin accounts cannot be permanently deleted.'
+          : 'Protected'}</span>`;
+
+    return `<tr>
+      <td>${id}</td>
+      <td>${escapeHTML(account.full_name)}</td>
+      <td>${escapeHTML(account.username)}</td>
+      <td>${roleLabels[role] || escapeHTML(role)}</td>
+      <td><span class="status-badge ${active ? 'ready' : 'pending'}">${active ? 'Active' : 'Inactive'}</span></td>
+      <td>${escapeHTML(created)}</td>
+      <td>${actionButton}</td>
+    </tr>`;
+  }).join('');
+
+  return `<div class="page-heading">
+      <div><p class="eyebrow">ADMINISTRATION</p><h1>Staff / User Management</h1><p class="page-description">Create and manage Cashier and Kitchen Staff accounts.</p></div>
+    </div>
+    ${auth.staffMessage ? `<div class="staff-notice success" role="status">${escapeHTML(auth.staffMessage)}</div>` : ''}
+    ${auth.staffError ? `<div class="staff-notice error" role="alert">${escapeHTML(auth.staffError)}</div>` : ''}
+    <div class="staff-grid">
+      <article class="panel staff-create-panel">
+        <div class="panel-heading"><div><h2>Add Staff</h2><p>Create an active account for a Cashier or Kitchen Staff member.</p></div></div>
+        <form id="staffCreateForm" class="staff-create-form" method="post" action="index.php?dashboard=admin&staff=1">
+          <input type="hidden" name="action" value="create_staff">
+          <input type="hidden" name="csrf_token" value="${escapeHTML(auth.csrfToken)}">
+          <label><span class="field-label">Full Name</span><input class="form-control" name="full_name" maxlength="100" autocomplete="name" required></label>
+          <label><span class="field-label">Username</span><input class="form-control" name="username" minlength="3" maxlength="50" pattern="[A-Za-z0-9._-]{3,50}" autocomplete="username" required></label>
+          <label><span class="field-label">Password</span><input class="form-control" name="password" type="password" minlength="12" autocomplete="new-password" required></label>
+          <label><span class="field-label">Confirm Password</span><input class="form-control" name="confirm_password" type="password" minlength="12" autocomplete="new-password" required></label>
+          <label><span class="field-label">Staff Role</span><select class="form-control" name="staff_role" required><option value="" disabled selected>Select staff role</option><option value="cashier">Cashier</option><option value="kitchen">Kitchen Staff</option></select></label>
+          <button class="primary-button" type="submit">Add Staff</button>
+        </form>
+      </article>
+      <article class="panel staff-list-panel">
+        <div class="staff-list-toolbar">
+          <div class="panel-heading"><div><h2>Accounts</h2><p>View account roles and activation status.</p></div></div>
+          <label class="staff-filter" for="staffFilter"><span class="field-label">Filter accounts</span><select class="form-control" id="staffFilter">
+            <option value="active"${staffFilter === 'active' ? ' selected' : ''}>Active Staff</option>
+            <option value="all"${staffFilter === 'all' ? ' selected' : ''}>All Staff</option>
+            <option value="inactive"${staffFilter === 'inactive' ? ' selected' : ''}>Inactive Staff</option>
+            <option value="admin"${staffFilter === 'admin' ? ' selected' : ''}>Admin</option>
+            <option value="cashier"${staffFilter === 'cashier' ? ' selected' : ''}>Cashier</option>
+            <option value="kitchen"${staffFilter === 'kitchen' ? ' selected' : ''}>Kitchen Staff</option>
+          </select></label>
+        </div>
+        ${rows ? `<div class="table-scroll"><table><thead><tr><th>ID</th><th>Full Name</th><th>Username</th><th>Role</th><th>Status</th><th>Date Created</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>` : emptyState('No accounts match this filter.', '♙')}
+      </article>
+    </div>
+    <div class="staff-modal" id="staffActionModal" role="dialog" aria-modal="true" aria-labelledby="staffActionTitle" aria-describedby="staffActionText" hidden>
+      <div class="staff-modal-card">
+        <h2 id="staffActionTitle">Confirm staff account action</h2>
+        <p id="staffActionText"></p>
+        <form id="staffActionForm" method="post" action="index.php?dashboard=admin&staff=1">
+          <input type="hidden" id="staffAction" name="action" value="">
+          <input type="hidden" name="csrf_token" value="${escapeHTML(auth.csrfToken)}">
+          <input type="hidden" id="staffActionAccountId" name="account_id" value="">
+          <input type="hidden" id="staffActionStatus" name="is_active" value="">
+          <div class="staff-modal-actions">
+            <button class="secondary-button" type="button" data-close-staff-action>Cancel</button>
+            <button class="danger-button" id="staffActionConfirm" type="submit">Confirm</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="staff-modal" id="resetPasswordModal" role="dialog" aria-modal="true" aria-labelledby="resetPasswordTitle" hidden>
+      <div class="staff-modal-card">
+        <h2 id="resetPasswordTitle">Reset staff password?</h2>
+        <p id="resetPasswordText">This will replace the staff member's password and require a password change at next login.</p>
+        <form id="resetStaffPasswordForm" method="post" action="index.php?dashboard=admin&staff=1">
+          <input type="hidden" name="action" value="reset_staff_password">
+          <input type="hidden" name="csrf_token" value="${escapeHTML(auth.csrfToken)}">
+          <input type="hidden" id="resetAccountId" name="account_id" value="">
+          <div class="staff-modal-actions">
+            <button class="secondary-button" type="button" data-close-reset>Cancel</button>
+            <button class="danger-button" type="submit">Reset Password</button>
+          </div>
+        </form>
+      </div>
+    </div>
+    <div class="staff-modal" id="temporaryPasswordModal" role="dialog" aria-modal="true" aria-labelledby="temporaryPasswordTitle"${auth.temporaryPassword ? '' : ' hidden'}>
+      <div class="staff-modal-card">
+        <h2 id="temporaryPasswordTitle">Temporary password</h2>
+        <p>This password is shown once. Give it privately to <strong>${escapeHTML(auth.temporaryPasswordUsername)}</strong>.</p>
+        <div class="temporary-password-value"><code id="temporaryPasswordValue">${escapeHTML(auth.temporaryPassword)}</code></div>
+        ${auth.temporaryPassword ? '<button class="primary-button" type="button" data-copy-temporary>Copy Temporary Password</button>' : ''}
+        <button class="secondary-button staff-modal-dismiss" type="button" data-close-temporary>Close</button>
+      </div>
+    </div>`;
 }
 
 function updateStorageNotice() {
@@ -548,12 +632,12 @@ function renderDashboard() {
         <div class="brand"><div class="brand-mark" aria-hidden="true">Y</div><div class="brand-copy"><span class="brand-name">YDUR'S</span><span class="brand-subtitle">FRIED &amp; GRILL</span></div><button class="icon-button sidebar-close" id="sidebarClose" aria-label="Close menu">&times;</button></div>
         <div class="workspace-label">WORKSPACE</div>
         <nav class="main-nav" aria-label="${ROLE_NAMES[currentUser.role]} navigation">${navMarkup}</nav>
-        <div class="sidebar-bottom"><div class="user-mini"><div class="avatar">${currentUser.name.charAt(0)}</div><div class="user-mini-info"><strong>${currentUser.name}</strong><span>${ROLE_NAMES[currentUser.role]}</span></div></div>${currentUser.role === 'cashier' ? '' : '<button class="logout-button" data-logout>Logout <span aria-hidden="true">↗</span></button>'}</div>
+        <div class="sidebar-bottom"><div class="user-mini"><div class="avatar">${escapeHTML(currentUser.name.charAt(0))}</div><div class="user-mini-info"><strong>${escapeHTML(currentUser.name)}</strong><span>${ROLE_NAMES[currentUser.role]}</span></div></div>${currentUser.role === 'cashier' ? '' : '<button class="logout-button" data-logout>Logout <span aria-hidden="true">↗</span></button>'}</div>
       </aside>
       <div class="sidebar-scrim" id="sidebarScrim"></div>
       <main class="main-area">
-        <header class="topbar"><div class="topbar-left"><button class="icon-button menu-toggle" id="menuToggle" aria-label="Open navigation">☰</button><div class="breadcrumb"><span>YDUR'S FRIED &amp; GRILL</span><b>/</b><strong id="breadcrumbCurrent"></strong></div></div><div class="topbar-actions"><div class="topbar-user"><div class="avatar avatar-small">${currentUser.name.charAt(0)}</div><div><strong>${currentUser.name}</strong><span>${ROLE_NAMES[currentUser.role]}</span></div></div><button class="topbar-logout" data-logout>Logout</button></div></header>
-        <section class="content-area"><div class="demo-notice"><span aria-hidden="true">ⓘ</span> Frontend demonstration only. Browser storage and demo role permissions are not secure authentication.</div><div class="storage-notice" id="storageNotice" role="alert" hidden></div><section class="page-view active" id="pageContent"></section><footer class="page-footer"><span>© 2026 YDUR's Fried &amp; Grill</span><span>Restaurant Management System <b>•</b> Frontend demonstration</span></footer></section>
+        <header class="topbar"><div class="topbar-left"><button class="icon-button menu-toggle" id="menuToggle" aria-label="Open navigation">☰</button><div class="breadcrumb"><span>YDUR'S FRIED &amp; GRILL</span><b>/</b><strong id="breadcrumbCurrent"></strong></div></div><div class="topbar-actions"><div class="topbar-user"><div class="avatar avatar-small">${escapeHTML(currentUser.name.charAt(0))}</div><div><strong>${escapeHTML(currentUser.name)}</strong><span>${ROLE_NAMES[currentUser.role]}</span></div></div><button class="topbar-logout" data-logout>Logout</button></div></header>
+        <section class="content-area"><div class="demo-notice"><span aria-hidden="true">ⓘ</span> Orders, products, and payments in this workspace are currently stored in this browser only.</div><div class="storage-notice" id="storageNotice" role="alert" hidden></div><section class="page-view active" id="pageContent"></section><footer class="page-footer"><span>© 2026 YDUR's Fried &amp; Grill</span><span>Restaurant Management System <b>•</b> Local browser data</span></footer></section>
       </main>
     </div><div class="toast" id="appToast" role="status" aria-live="polite"></div>`;
   updatePage();
@@ -590,10 +674,13 @@ function toggleSidebar(open) {
 }
 
 function logout() {
-  sessionStorage.removeItem('ydurDemoSession');
-  currentUser = null;
-  app.replaceChildren();
-  window.location.replace(window.location.pathname);
+  const form = document.createElement('form');
+  form.method = 'post';
+  form.action = window.location.pathname;
+  form.hidden = true;
+  form.innerHTML = `<input name="action" value="logout"><input name="csrf_token" value="${escapeHTML(auth.csrfToken)}">`;
+  document.body.appendChild(form);
+  form.submit();
 }
 
 function showToast(message) {
@@ -619,6 +706,68 @@ function handleClick(event) {
   const target = event.target.closest('button');
   if (!target) return;
   if (target.hasAttribute('data-logout')) return logout();
+  if (target.dataset.staffAction) {
+    const action = target.dataset.staffAction;
+    const accountId = target.dataset.accountId;
+    const accountName = target.dataset.accountName;
+    const modal = document.getElementById('staffActionModal');
+    const title = document.getElementById('staffActionTitle');
+    const text = document.getElementById('staffActionText');
+    const confirmButton = document.getElementById('staffActionConfirm');
+    document.getElementById('staffActionAccountId').value = accountId;
+    document.getElementById('staffAction').value =
+      action === 'delete' ? 'delete_staff' : 'set_staff_status';
+
+    if (action === 'deactivate') {
+      title.textContent = 'Deactivate staff account?';
+      text.textContent = `${accountName} will no longer be able to log in. Their account and all related transaction records will be preserved.`;
+      document.getElementById('staffActionStatus').value = '0';
+      confirmButton.textContent = 'Deactivate';
+    } else if (action === 'reactivate') {
+      title.textContent = 'Reactivate staff account?';
+      text.textContent = `Restore ${accountName}'s ability to log in, provided their password is valid.`;
+      document.getElementById('staffActionStatus').value = '1';
+      confirmButton.textContent = 'Reactivate';
+    } else {
+      title.textContent = 'Delete staff account permanently?';
+      text.textContent = `Permanently remove ${accountName}'s unused account? This cannot be undone. No transaction records will be deleted.`;
+      document.getElementById('staffActionStatus').value = '';
+      confirmButton.textContent = 'Delete Permanently';
+    }
+
+    modal.hidden = false;
+    confirmButton.focus();
+    return;
+  }
+  if (target.hasAttribute('data-close-staff-action')) {
+    document.getElementById('staffActionModal').hidden = true;
+    return;
+  }
+  if (target.dataset.resetAccount) {
+    const modal = document.getElementById('resetPasswordModal');
+    document.getElementById('resetAccountId').value = target.dataset.resetAccount;
+    document.getElementById('resetPasswordText').textContent =
+      `Reset the password for ${target.dataset.resetUsername}? The employee will be required to change it at next login.`;
+    modal.hidden = false;
+    return;
+  }
+  if (target.hasAttribute('data-close-reset')) {
+    document.getElementById('resetPasswordModal').hidden = true;
+    return;
+  }
+  if (target.hasAttribute('data-close-temporary')) {
+    document.getElementById('temporaryPasswordModal').hidden = true;
+    return;
+  }
+  if (target.hasAttribute('data-copy-temporary')) {
+    const value = document.getElementById('temporaryPasswordValue').textContent;
+    const copy = navigator.clipboard
+      ? navigator.clipboard.writeText(value)
+      : Promise.reject(new Error('Clipboard unavailable'));
+    copy.then(() => showToast('Temporary password copied.'))
+      .catch(() => showToast('Copy unavailable. Select and copy the password manually.'));
+    return;
+  }
   if (target.dataset.page) return navigateTo(target.dataset.page);
   if (target.dataset.goto) return navigateTo(target.dataset.goto);
   const action = target.dataset.action;
@@ -656,6 +805,16 @@ function handleClick(event) {
 function handleSubmit(event) {
   const form = event.target;
   if (!form.matches('form')) return;
+  if (
+    form.id === 'staffCreateForm' ||
+    form.id === 'staffStatusForm' ||
+    form.id === 'staffActionForm' ||
+    form.id === 'changePasswordForm' ||
+    form.id === 'resetStaffPasswordForm' ||
+    form.classList.contains('staff-status-form')
+  ) {
+    return;
+  }
   event.preventDefault();
   if (form.id === 'historySearch') {
     historySearch = new FormData(form).get('query').trim();
@@ -667,6 +826,10 @@ function handleSubmit(event) {
 }
 
 function handleChange(event) {
+  if (event.target.id === 'staffFilter') {
+    staffFilter = event.target.value;
+    updatePage();
+  }
   if (event.target.id === 'historyStatus') {
     historyStatus = event.target.value;
     updatePage();
@@ -856,10 +1019,67 @@ function printReceipt(orderId) {
   printWindow.document.close();
 }
 
+function showChangePassword() {
+  document.title = "YDUR's Fried & Grill | Change password";
+  app.innerHTML = `
+    <main class="login-layout">
+      <section class="login-brand-panel" aria-label="YDUR's Fried & Grill">
+        <div class="login-brand">
+          <div class="brand-mark" aria-hidden="true">Y</div>
+          <div class="brand-copy"><span class="brand-name">YDUR'S</span><span class="brand-subtitle">FRIED &amp; GRILL</span></div>
+        </div>
+        <div class="login-welcome">
+          <p class="eyebrow">ACCOUNT SECURITY</p>
+          <h1>Create a new<br>password.</h1>
+          <p>Your temporary password must be changed before you can access the workspace.</p>
+        </div>
+        <p class="login-brand-footer">Fresh from our grill, made for your table.</p>
+      </section>
+      <section class="login-form-panel">
+        <form class="login-card" id="changePasswordForm" method="post" action="index.php?change_password=1">
+          <div class="login-card-brand"><div class="brand-mark" aria-hidden="true">Y</div></div>
+          <p class="eyebrow">PASSWORD UPDATE</p>
+          <h2>Change password</h2>
+          ${auth.staffError ? `<div class="login-error">${escapeHTML(auth.staffError)}</div>` : ''}
+          <input type="hidden" name="action" value="change_password">
+          <input type="hidden" name="csrf_token" value="${escapeHTML(auth.csrfToken)}">
+          <label class="field-label" for="newPassword">New Password</label>
+          <div class="password-field">
+            <input class="form-control" id="newPassword" name="new_password" type="password" minlength="12" autocomplete="new-password" required>
+            <button class="password-toggle" type="button" data-password-toggle="newPassword" aria-label="Show new password" aria-pressed="false">Show</button>
+          </div>
+          <label class="field-label" for="confirmPassword">Confirm New Password</label>
+          <div class="password-field">
+            <input class="form-control" id="confirmPassword" name="confirm_password" type="password" minlength="12" autocomplete="new-password" required>
+            <button class="password-toggle" type="button" data-password-toggle="confirmPassword" aria-label="Show confirm password" aria-pressed="false">Show</button>
+          </div>
+          <button class="primary-button login-submit" type="submit">Update Password <span aria-hidden="true">→</span></button>
+        </form>
+      </section>
+    </main>`;
+
+  app.querySelectorAll('[data-password-toggle]').forEach(button => {
+    button.addEventListener('click', event => {
+      const input = document.getElementById(event.currentTarget.dataset.passwordToggle);
+      const visible = input.type === 'password';
+      input.type = visible ? 'text' : 'password';
+      event.currentTarget.textContent = visible ? 'Hide' : 'Show';
+      event.currentTarget.setAttribute('aria-label', visible ? 'Hide password' : 'Show password');
+      event.currentTarget.setAttribute('aria-pressed', String(visible));
+      input.focus();
+    });
+  });
+}
+
 ensureDemoProducts();
 if (!currentUser) {
   if (requestedRole !== null) window.history.replaceState(null, '', window.location.pathname);
   showLogin();
+} else if (
+  params.get('change_password') === '1' ||
+  Number(currentUser.must_change_password) === 1
+) {
+  showChangePassword();
 } else if (!requestedRole) {
   window.location.replace(dashboardUrl(currentUser.role));
 } else if (requestedRole !== currentUser.role) {
