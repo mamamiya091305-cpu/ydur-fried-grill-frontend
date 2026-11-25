@@ -1,0 +1,26 @@
+RewriteEngine On
+
+RewriteCond %{HTTP_HOST} !^ydursfriedgrill\.site\.je$ [NC]
+RewriteRule ^ https://ydursfriedgrill.site.je%{REQUEST_URI} [R=301,L]
+
+RewriteCond %{HTTPS} !=on
+RewriteRule ^ https://ydursfriedgrill.site.je%{REQUEST_URI} [R=301,L]
+
+<IfModule mod_headers.c>
+  Header always set X-Content-Type-Options "nosniff"
+  Header always set X-Frame-Options "SAMEORIGIN"
+  Header always set Referrer-Policy "strict-origin-when-cross-origin"
+  Header always set Permissions-Policy "geolocation=(), microphone=(), camera=()"
+  Header always set Strict-Transport-Security "max-age=31536000"
+  Header always set Content-Security-Policy-Report-Only "default-src 'self'; base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:"
+</IfModule>
+
+Options -Indexes
+
+<FilesMatch "^\.">
+  Require all denied
+</FilesMatch>
+
+<FilesMatch "(?i)(^README\.txt$|^.*\.(sql|dump|bak|backup|old|log|zip|tar|gz|7z)$|^diagnostic\.php$|^reset_admin\.php$|^setup_admin\.php$|^test_connection\.php$)">
+  Require all denied
+</FilesMatch>
