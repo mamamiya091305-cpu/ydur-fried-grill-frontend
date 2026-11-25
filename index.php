@@ -102,7 +102,7 @@ if (isset($_SESSION['user_id']) || isset($_SESSION['role'])) {
     ) {
         $_SESSION = [];
     } else {
-        require_once dirname(__DIR__) . '/config/database.php';
+        require_once __DIR__ . '/config/database.php';
 
         try {
             $sessionAccount = $pdo->prepare(
@@ -188,7 +188,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit('Access denied.');
         }
 
-        require_once dirname(__DIR__) . '/config/database.php';
+        require_once __DIR__ . '/config/database.php';
 
         $newPassword = is_string($_POST['new_password'] ?? null) ? $_POST['new_password'] : '';
         $confirmPassword = is_string($_POST['confirm_password'] ?? null) ? $_POST['confirm_password'] : '';
@@ -239,7 +239,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit('Access denied.');
         }
 
-        require_once dirname(__DIR__) . '/config/database.php';
+        require_once __DIR__ . '/config/database.php';
 
         $accountId = filter_var($_POST['account_id'] ?? null, FILTER_VALIDATE_INT, [
             'options' => ['min_range' => 1]
@@ -302,7 +302,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             exit('Access denied.');
         }
 
-        require_once dirname(__DIR__) . '/config/database.php';
+        require_once __DIR__ . '/config/database.php';
 
         if ($action === 'create_staff') {
             $fullName = is_string($_POST['full_name'] ?? null) ? trim($_POST['full_name']) : '';
@@ -500,7 +500,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     if ($username === '' || $password === '') {
         $loginError = 'Enter both your username and password.';
     } else {
-        require_once dirname(__DIR__) . '/config/database.php';
+        require_once __DIR__ . '/config/database.php';
 
         try {
             $statement = $pdo->prepare(
@@ -646,13 +646,13 @@ $clientAuth = [
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="docs/css/style.css" />
 </head>
 <body>
   <div id="app"></div>
   <script>
     window.YDUR_AUTH = <?= json_encode($clientAuth, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   </script>
-  <script src="js/app.js"></script>
+  <script src="docs/js/app.js"></script>
 </body>
 </html>

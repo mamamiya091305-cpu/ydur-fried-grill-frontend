@@ -2,7 +2,7 @@ YDUR'S FRIED & GRILL - MANAGEMENT SYSTEM
 
 CONTENTS
 - index.html       Standalone browser-only demonstration entry point
-- index.php        Database-backed login and role-based dashboard entry point
+- ../index.php     Database-backed login and role-based dashboard entry point
 - css/style.css    Existing visual theme plus responsive ordering and payment modules
 - js/app.js        Role navigation, menu pricing, orders, kitchen workflow, sales, and logout
 
@@ -19,9 +19,9 @@ HOW TO OPEN THE BROWSER DEMONSTRATION
 HOW TO OPEN DATABASE-BACKED SIGN-IN WITH XAMPP
 1. Start Apache and MySQL from the XAMPP Control Panel.
 2. Confirm config/database.php connects to the existing ydurs_db database.
-3. Open http://localhost/ydur_fried_grill_frontend/docs/index.php
+3. Open http://localhost/ydur_fried_grill_frontend/index.php
 4. Sign in with an existing active account from the users table.
-   GitHub Pages does not run PHP; use a PHP-enabled server for index.php.
+   The PHP entry point is outside docs/, so GitHub Pages does not publish or run it.
 
 AUTHENTICATION
 - Usernames and passwords are checked against users using PDO and password_verify().
