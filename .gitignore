@@ -2,7 +2,35 @@
 # Protect database credentials
 /config/database.php
 
+# Keep deployment credentials and temporary diagnostics out of GitHub.
+/htdocs/config/database.local.php
+/htdocs/config/database.production.php
+/htdocs/diagnostic.php
+
 # Keep temporary recovery tools out of GitHub
 /reset_admin.php
 /setup_admin.php
 /test_connection.php
+/config/setup_admin_key.php
+/htdocs/config/setup_admin_key.php
+
+# General credential and backup files
+.env
+.env.*
+!.env.example
+!.env.*.example
+*.bak
+*.backup
+*.dump
+*.sql.bak
+*.sql.gz
+*backup*.sql
+*dump*.sql
+*.old
+*.log
+*.zip
+*.7z
+*.tar
+*.gz
+*~
+YDURS_BACKUP/

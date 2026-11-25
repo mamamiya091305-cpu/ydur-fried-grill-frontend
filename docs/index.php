@@ -1,26 +1,70 @@
 <?php
 
-$isHttps = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
-ini_set('session.use_strict_mode', '1');
-ini_set('session.use_only_cookies', '1');
-ini_set('session.cookie_httponly', '1');
-ini_set('session.cookie_samesite', 'Lax');
-session_set_cookie_params(0, '/', '', $isHttps, true);
-session_start();
+ini_set('display_errors', '0');
+ini_set('log_errors', '1');
+error_reporting(E_ALL);
 
 header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
 header('Pragma: no-cache');
+header('X-Content-Type-Options: nosniff');
+header('X-Frame-Options: SAMEORIGIN');
+header('Referrer-Policy: strict-origin-when-cross-origin');
+header('Permissions-Policy: geolocation=(), microphone=(), camera=()');
+
+$cspNonce = bin2hex(random_bytes(16));
+header(
+    "Content-Security-Policy-Report-Only: default-src 'self'; "
+    . "base-uri 'self'; object-src 'none'; frame-ancestors 'self'; form-action 'self'; "
+    . "script-src 'self' 'nonce-" . $cspNonce . "'; "
+    . "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+    . "font-src 'self' https://fonts.gstatic.com; "
+    . "img-src 'self' data:"
+);
+
+if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+    header('Strict-Transport-Security: max-age=31536000');
+}
+
+$isSpectatorRequest = (($_GET['spectator'] ?? '') === '1');
+$isSpectatorExitRequest = (($_GET['spectator_exit'] ?? '') === '1');
+$isViewOnlyRequest = $isSpectatorRequest || $isSpectatorExitRequest;
+if ($isViewOnlyRequest && ($_SERVER['REQUEST_METHOD'] ?? 'GET') !== 'GET') {
+    header('Allow: GET');
+    http_response_code(405);
+    exit('Spectator Mode is view-only.');
+}
+
+if ($isViewOnlyRequest) {
+    $clientAuth = [
+        'user' => null,
+        'csrfToken' => '',
+        'loginError' => '',
+        'staffAccounts' => [],
+        'staffMessage' => '',
+        'staffError' => '',
+        'temporaryPassword' => '',
+        'temporaryPasswordUsername' => '',
+        'spectator' => $isSpectatorRequest
+    ];
+} else {
+    $isHttps = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    ini_set('session.use_strict_mode', '1');
+    ini_set('session.use_only_cookies', '1');
+    ini_set('session.cookie_httponly', '1');
+    ini_set('session.cookie_samesite', 'Lax');
+    session_set_cookie_params(0, '/', '', $isHttps, true);
+    session_start();
 
 $roles = ['admin', 'cashier', 'kitchen'];
 
 function getStaffDeletionReferenceColumns(PDO $pdo): array
 {
-    $tables = ['orders', 'payments', 'stock_movements'];
+    $tables = ['orders', 'payments', 'stock_movements', 'daily_operations'];
     $tableQuery = $pdo->query(
         "SELECT TABLE_NAME
          FROM INFORMATION_SCHEMA.TABLES
          WHERE TABLE_SCHEMA = DATABASE()
-           AND TABLE_NAME IN ('orders', 'payments', 'stock_movements')"
+           AND TABLE_NAME IN ('orders', 'payments', 'stock_movements', 'daily_operations')"
     );
     $existingTables = [];
     foreach ($tableQuery->fetchAll(PDO::FETCH_COLUMN) as $existingTable) {
@@ -497,7 +541,16 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     $username = is_string($_POST['username'] ?? null) ? trim($_POST['username']) : '';
     $password = is_string($_POST['password'] ?? null) ? $_POST['password'] : '';
 
-    if ($username === '' || $password === '') {
+    $now = time();
+    $loginAttempts = isset($_SESSION['login_attempts']) && is_array($_SESSION['login_attempts'])
+        ? $_SESSION['login_attempts']
+        : ['count' => 0, 'locked_until' => 0];
+    $loginAttempts['count'] = (int) ($loginAttempts['count'] ?? 0);
+    $loginAttempts['locked_until'] = (int) ($loginAttempts['locked_until'] ?? 0);
+
+    if ($loginAttempts['locked_until'] > $now) {
+        $loginError = 'Too many failed sign-in attempts. Please try again later.';
+    } elseif ($username === '' || $password === '') {
         $loginError = 'Enter both your username and password.';
     } else {
         require_once dirname(__DIR__) . '/config/database.php';
@@ -523,6 +576,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             in_array($account['role'], $roles, true) &&
             password_verify($password, $account['password_hash'])
         ) {
+            unset($_SESSION['login_attempts']);
             session_regenerate_id(true);
             $_SESSION = [
                 'user_id' => (int) $account['id'],
@@ -546,6 +600,13 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         if ($loginError === '') {
             $loginError = 'Incorrect username or password. Please try again.';
+            $loginAttempts['count']++;
+            if ($loginAttempts['count'] >= 5) {
+                $loginAttempts['locked_until'] = time() + 900;
+                $loginAttempts['count'] = 0;
+                $loginError = 'Too many failed sign-in attempts. Please try again in 15 minutes.';
+            }
+            $_SESSION['login_attempts'] = $loginAttempts;
         }
     }
 }
@@ -633,26 +694,29 @@ $clientAuth = [
     'staffMessage' => $staffMessage,
     'staffError' => $staffError,
     'temporaryPassword' => $temporaryPassword,
-    'temporaryPasswordUsername' => $temporaryPasswordUsername
+    'temporaryPasswordUsername' => $temporaryPasswordUsername,
+    'spectator' => false
 ];
+}
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <meta name="description" content="YDUR's Fried & Grill restaurant management system." />
-  <title>YDUR's Fried &amp; Grill | Sign in</title>
+  <meta name="description" content="Ydur's Fried Grill Management System for authorized restaurant employees." />
+  <title>Ydur's Fried Grill Management System | Staff Login</title>
+  <link rel="preload" as="image" href="../ydurslogo.jpg" fetchpriority="high">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/style.css" />
+  <link rel="stylesheet" href="css/style.css?v=20261125-separated-menu-v3" />
 </head>
 <body>
   <div id="app"></div>
-  <script>
+  <script nonce="<?= $cspNonce ?>">
     window.YDUR_AUTH = <?= json_encode($clientAuth, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>;
   </script>
-  <script src="js/app.js"></script>
+  <script src="js/app.js?v=20261125-separated-menu-v3"></script>
 </body>
 </html>
