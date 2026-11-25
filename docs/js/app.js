@@ -48,6 +48,7 @@ const DEMO_PRODUCTS = [
 ];
 
 const app = document.getElementById('app');
+const staticDemo = window.YDUR_STATIC_DEMO === true;
 const params = new URLSearchParams(window.location.search);
 const requestedRole = params.get('dashboard');
 const auth = window.YDUR_AUTH || { user: null, csrfToken: '', loginError: '', staffAccounts: [], staffMessage: '', staffError: '', temporaryPassword: '', temporaryPasswordUsername: '' };
@@ -198,6 +199,43 @@ function saveTransactions(orders, sales) {
 
 function showLogin() {
   document.title = "YDUR's Fried & Grill | Sign in";
+  if (staticDemo) {
+    app.innerHTML = `
+      <main class="login-layout">
+        <section class="login-brand-panel" aria-label="YDUR's Fried & Grill">
+          <div class="login-brand">
+            <div class="brand-mark" aria-hidden="true">Y</div>
+            <div class="brand-copy"><span class="brand-name">YDUR'S</span><span class="brand-subtitle">FRIED &amp; GRILL</span></div>
+          </div>
+          <div class="login-welcome">
+            <p class="eyebrow">RESTAURANT MANAGEMENT</p>
+            <h1>Good food.<br>Thoughtful service.</h1>
+            <p>Explore the restaurant workspace using browser-only demonstration data.</p>
+          </div>
+          <p class="login-brand-footer">Fresh from our grill, made for your table.</p>
+        </section>
+        <section class="login-form-panel">
+          <div class="login-card">
+            <div class="login-card-brand"><div class="brand-mark" aria-hidden="true">Y</div></div>
+            <p class="eyebrow">BROWSER DEMO</p>
+            <h2>Choose a workspace</h2>
+            <p class="login-intro">This standalone demo does not authenticate staff accounts. Its data is stored in this browser only.</p>
+            ${Object.entries(ROLE_NAMES).map(([role, label]) => `<button class="primary-button login-submit" type="button" data-demo-role="${role}">Continue as ${label} <span aria-hidden="true">→</span></button>`).join('')}
+            <p class="security-note">For database-backed sign-in, open <a href="index.php">the PHP sign-in page</a> using XAMPP.</p>
+          </div>
+        </section>
+      </main>`;
+    app.querySelectorAll('[data-demo-role]').forEach(button => {
+      button.addEventListener('click', () => {
+        const role = button.dataset.demoRole;
+        currentUser = { id: 0, username: `${role}-demo`, name: ROLE_NAMES[role], role };
+        activePage = 'dashboard';
+        renderDashboard();
+      });
+    });
+    return;
+  }
+
   app.innerHTML = `
     <main class="login-layout">
       <section class="login-brand-panel" aria-label="YDUR's Fried & Grill">
@@ -488,7 +526,7 @@ function pageContent(role, page) {
   }
   if (page === 'menu' && (role === 'admin' || role === 'cashier')) return productManagementPage();
   if (page === 'pos' && (role === 'admin' || role === 'cashier')) return paymentPage();
-  if (page === 'staff' && role === 'admin') return staffManagementPage();
+  if (page === 'staff' && role === 'admin' && !staticDemo) return staffManagementPage();
   const item = NAVIGATION[role].find(entry => entry[0] === page);
   return `<div class="page-heading"><div><p class="eyebrow">${role === 'admin' ? 'MANAGEMENT' : 'POINT OF SALE'}</p><h1>${escapeHTML(item ? item[1] : 'Dashboard')}</h1><p class="page-description">This workspace is ready for future database integration.</p></div></div><article class="panel placeholder-panel">${emptyState('This module is outside the scope of the current frontend demonstration.', item ? item[2] : '◇')}</article>`;
 }
@@ -622,7 +660,7 @@ function updateStorageNotice() {
 
 function renderDashboard() {
   document.title = `YDUR's Fried & Grill | ${ROLE_NAMES[currentUser.role]}`;
-  const links = NAVIGATION[currentUser.role];
+  const links = NAVIGATION[currentUser.role].filter(entry => !staticDemo || entry[0] !== 'staff');
   const navMarkup = links.map(([page, label, icon]) => page === 'logout'
     ? `<button class="nav-link" data-logout><span class="nav-icon" aria-hidden="true">${icon}</span><span>${label}</span></button>`
     : `<button class="nav-link${activePage === page ? ' active' : ''}" data-page="${page}"><span class="nav-icon" aria-hidden="true">${icon}</span><span>${label}</span></button>`).join('');
@@ -674,6 +712,12 @@ function toggleSidebar(open) {
 }
 
 function logout() {
+  if (staticDemo) {
+    currentUser = null;
+    activePage = 'dashboard';
+    showLogin();
+    return;
+  }
   const form = document.createElement('form');
   form.method = 'post';
   form.action = window.location.pathname;

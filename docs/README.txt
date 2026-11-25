@@ -1,12 +1,20 @@
 YDUR'S FRIED & GRILL - MANAGEMENT SYSTEM
 
 CONTENTS
+- index.html       Standalone browser-only demonstration entry point
 - index.php        Database-backed login and role-based dashboard entry point
-- index.html       Redirects visitors to the PHP entry point
 - css/style.css    Existing visual theme plus responsive ordering and payment modules
 - js/app.js        Role navigation, menu pricing, orders, kitchen workflow, sales, and logout
 
-HOW TO OPEN LOCALLY WITH XAMPP
+HOW TO OPEN THE BROWSER DEMONSTRATION
+1. Open docs/index.html directly in a browser, or use
+   http://localhost/ydur_fried_grill_frontend/docs/index.html with XAMPP.
+2. Choose a demonstration role. No database or PHP runtime is required.
+3. Products, orders, and sales are saved only in the current browser's localStorage.
+   The role picker is for demonstration only; it does not authenticate users.
+4. Staff / User Management is unavailable in this browser-only mode.
+
+HOW TO OPEN DATABASE-BACKED SIGN-IN WITH XAMPP
 1. Start Apache and MySQL from the XAMPP Control Panel.
 2. Confirm config/database.php connects to the existing ydurs_db database.
 3. Open http://localhost/ydur_fried_grill_frontend/docs/index.php
