@@ -221,7 +221,7 @@ function showLogin() {
             <h2>Choose a workspace</h2>
             <p class="login-intro">This standalone demo does not authenticate staff accounts. Its data is stored in this browser only.</p>
             ${Object.entries(ROLE_NAMES).map(([role, label]) => `<button class="primary-button login-submit" type="button" data-demo-role="${role}">Continue as ${label} <span aria-hidden="true">→</span></button>`).join('')}
-            <p class="security-note">For database-backed sign-in, open <a href="index.php">the PHP sign-in page</a> using XAMPP.</p>
+            <p class="security-note">GitHub Pages supports this browser-only demo. Database-backed sign-in requires a PHP-enabled server such as XAMPP.</p>
           </div>
         </section>
       </main>`;

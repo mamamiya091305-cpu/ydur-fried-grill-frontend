@@ -7,18 +7,21 @@ CONTENTS
 - js/app.js        Role navigation, menu pricing, orders, kitchen workflow, sales, and logout
 
 HOW TO OPEN THE BROWSER DEMONSTRATION
-1. Open docs/index.html directly in a browser, or use
+1. For GitHub Pages, open the published site; it serves docs/index.html as the
+   browser-only demonstration.
+2. Locally, open docs/index.html directly in a browser, or use
    http://localhost/ydur_fried_grill_frontend/docs/index.html with XAMPP.
-2. Choose a demonstration role. No database or PHP runtime is required.
-3. Products, orders, and sales are saved only in the current browser's localStorage.
+3. Choose a demonstration role. No database or PHP runtime is required.
+4. Products, orders, and sales are saved only in the current browser's localStorage.
    The role picker is for demonstration only; it does not authenticate users.
-4. Staff / User Management is unavailable in this browser-only mode.
+5. Staff / User Management is unavailable in this browser-only mode.
 
 HOW TO OPEN DATABASE-BACKED SIGN-IN WITH XAMPP
 1. Start Apache and MySQL from the XAMPP Control Panel.
 2. Confirm config/database.php connects to the existing ydurs_db database.
 3. Open http://localhost/ydur_fried_grill_frontend/docs/index.php
 4. Sign in with an existing active account from the users table.
+   GitHub Pages does not run PHP; use a PHP-enabled server for index.php.
 
 AUTHENTICATION
 - Usernames and passwords are checked against users using PDO and password_verify().
